@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:personal_tracker/dashboard/dashboard_page.dart';
+import 'package:personal_tracker/transactions/add_edit_transaction_page.dart';
+import 'package:personal_tracker/transactions/transactions_page.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -13,6 +15,15 @@ class HomePage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Personal Finance Tracker'),
         actions: [
+          IconButton(
+            tooltip: 'Transactions',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const TransactionsPage()),
+              );
+            },
+            icon: const Icon(Icons.list_alt),
+          ),
           IconButton(
             tooltip: 'Sign out',
             onPressed: () async {
@@ -34,6 +45,15 @@ class HomePage extends StatelessWidget {
           ),
           const Expanded(child: DashboardPage()),
         ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () async {
+          await Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const AddEditTransactionPage()),
+          );
+        },
+        icon: const Icon(Icons.add),
+        label: const Text('Add Transaction'),
       ),
     );
   }

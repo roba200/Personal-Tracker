@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:personal_tracker/transactions/add_edit_transaction_page.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -183,12 +184,24 @@ class _DashboardPageState extends State<DashboardPage> {
                         label: Text(budget == 0 ? 'Set Budget' : 'Update Budget'),
                       ),
                       OutlinedButton.icon(
-                        onPressed: () => _quickAddDialog(type: 'income'),
+                        onPressed: () async {
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const AddEditTransactionPage(initialType: 'income'),
+                            ),
+                          );
+                        },
                         icon: const Icon(Icons.add),
                         label: const Text('Add Income'),
                       ),
                       OutlinedButton.icon(
-                        onPressed: () => _quickAddDialog(type: 'expense'),
+                        onPressed: () async {
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const AddEditTransactionPage(initialType: 'expense'),
+                            ),
+                          );
+                        },
                         icon: const Icon(Icons.remove),
                         label: const Text('Add Expense'),
                       ),
@@ -259,4 +272,3 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 }
-

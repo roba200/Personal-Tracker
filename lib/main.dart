@@ -5,6 +5,8 @@ import 'firebase_options.dart';
 import 'auth/login_page.dart';
 import 'auth/register_page.dart';
 import 'home/home_page.dart';
+import 'transactions/transactions_page.dart';
+import 'transactions/add_edit_transaction_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,6 +32,8 @@ class MyApp extends StatelessWidget {
         '/login': (_) => const LoginPage(),
         '/register': (_) => const RegisterPage(),
         '/home': (_) => const HomePage(),
+        '/transactions': (_) => const TransactionsPage(),
+        '/transaction/new': (_) => const AddEditTransactionPage(),
       },
     );
   }
