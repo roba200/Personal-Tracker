@@ -1,8 +1,14 @@
+/// Transactions list with filter controls (date range, category).
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../state/app_state.dart';
+import 'package:personal_tracker/services/transactions_service.dart';
+import 'package:personal_tracker/widgets/error_view.dart';
 import 'add_edit_transaction_page.dart';
 
+/// Lists transactions for the selected period and allows quick filtering.
 class TransactionsPage extends StatefulWidget {
   const TransactionsPage({super.key});
 
@@ -23,14 +29,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
     return DateTime(f.year, f.month + 1, 1);
   }
 
-  DateTimeRange? _range;
-  String _category = 'All';
-
-  @override
-  void initState() {
-    super.initState();
-    _range = DateTimeRange(start: _firstOfMonth, end: _firstOfNextMonth);
-  }
+  // Filters are handled via AppState (Provider)
 
   Query<Map<String, dynamic>> _baseQuery() {
     return FirebaseFirestore.instance
@@ -40,47 +39,35 @@ class _TransactionsPageState extends State<TransactionsPage> {
   }
 
   Stream<QuerySnapshot<Map<String, dynamic>>> _txStream() {
-    // Fetch by date only to avoid requiring a composite index when also filtering by category.
-    // Category filtering is applied client-side below.
-    var q = _baseQuery();
-    if (_range != null) {
-      q = q
-          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(_range!.start))
-          .where('date', isLessThan: Timestamp.fromDate(_range!.end));
-    }
-    q = q.orderBy('date', descending: true);
-    return q.snapshots();
+    // Delegate to service for reuse and single-responsibility.
+    final app = context.watch<AppState>();
+    return TransactionsService(_uid).streamInRange(app.range);
   }
 
   Stream<QuerySnapshot<Map<String, dynamic>>> _categoriesStream() {
-    // Same as _txStream but without category filter to collect category values.
-    var q = _baseQuery();
-    if (_range != null) {
-      q = q
-          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(_range!.start))
-          .where('date', isLessThan: Timestamp.fromDate(_range!.end));
-    }
-    return q.snapshots();
+    final app = context.watch<AppState>();
+    return TransactionsService(_uid).streamForCategories(app.range);
   }
 
-  Future<void> _pickRange() async {
-    final initial = _range ?? DateTimeRange(start: _firstOfMonth, end: _firstOfNextMonth);
-    final picked = await showDateRangePicker(
+  Future<void> _pickDate() async {
+    final app = context.read<AppState>();
+    final initial = app.range.start;
+    final picked = await showDatePicker(
       context: context,
-      initialDateRange: initial,
+      initialDate: initial,
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
     );
     if (picked != null) {
-      setState(() => _range = picked);
+      // Map the single picked date to a one-day range [start, nextDay)
+      final start = DateTime(picked.year, picked.month, picked.day);
+      final end = DateTime(picked.year, picked.month, picked.day + 1);
+      context.read<AppState>().setRange(DateTimeRange(start: start, end: end));
     }
   }
 
   void _clearFilters() {
-    setState(() {
-      _range = DateTimeRange(start: _firstOfMonth, end: _firstOfNextMonth);
-      _category = 'All';
-    });
+    context.read<AppState>().resetFilters();
   }
 
   @override
@@ -95,12 +82,15 @@ class _TransactionsPageState extends State<TransactionsPage> {
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: _pickRange,
-                    icon: const Icon(Icons.date_range),
-                    label: Text(_range == null
-                        ? 'All time'
-                        : '${_range!.start.year}-${_range!.start.month.toString().padLeft(2, '0')}-${_range!.start.day.toString().padLeft(2, '0')}  →  '
-                          '${_range!.end.year}-${_range!.end.month.toString().padLeft(2, '0')}-${_range!.end.day.toString().padLeft(2, '0')}'),
+                    onPressed: _pickDate,
+                    icon: const Icon(Icons.event),
+                    label: Consumer<AppState>(
+                      builder: (_, app, __) {
+                        final d = app.range.start;
+                        final label = '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+                        return Text(label);
+                      },
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -113,22 +103,38 @@ class _TransactionsPageState extends State<TransactionsPage> {
                       final cat = (d.data()['category'] as String?)?.trim();
                       if (cat != null && cat.isNotEmpty) set.add(cat);
                     }
-                    final items = set
-                        .map((c) => DropdownMenuItem<String>(value: c, child: Text(c)))
-                        .toList()
-                      ..sort((a, b) => a.value!.toLowerCase().compareTo(b.value!.toLowerCase()));
+                    final items =
+                        set
+                            .map(
+                              (c) => DropdownMenuItem<String>(
+                                value: c,
+                                child: Text(c),
+                              ),
+                            )
+                            .toList()
+                          ..sort(
+                            (a, b) => a.value!.toLowerCase().compareTo(
+                              b.value!.toLowerCase(),
+                            ),
+                          );
                     return SizedBox(
                       width: 160,
-                      child: DropdownButtonFormField<String>(
-                        value: _category,
-                        items: items,
-                        onChanged: (v) => setState(() => _category = v ?? 'All'),
-                        decoration: const InputDecoration(
-                          isDense: true,
-                          labelText: 'Category',
-                          border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        ),
+                      child: Consumer<AppState>(
+                        builder: (_, app, __) =>
+                            DropdownButtonFormField<String>(
+                              value: app.categoryFilter,
+                              items: items,
+                              onChanged: (v) => app.setCategory(v ?? 'All'),
+                              decoration: const InputDecoration(
+                                isDense: true,
+                                labelText: 'Category',
+                                border: OutlineInputBorder(),
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                              ),
+                            ),
                       ),
                     );
                   },
@@ -151,18 +157,20 @@ class _TransactionsPageState extends State<TransactionsPage> {
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (snapshot.hasError) {
-                  return Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Text(
-                      'Failed to load transactions.\n\n${snapshot.error}',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
+                  return ErrorView(
+                    title: "Couldn't load transactions",
+                    message: 'Please check your connection and try again.',
+                    details: snapshot.error.toString(),
+                    onRetry: () => setState(() {}),
                   );
                 }
                 var docs = snapshot.data?.docs ?? [];
-                if (_category != 'All') {
+                final category = context.watch<AppState>().categoryFilter;
+                if (category != 'All') {
                   docs = docs
-                      .where((d) => (d.data()['category'] as String?) == _category)
+                      .where(
+                        (d) => (d.data()['category'] as String?) == category,
+                      )
                       .toList();
                 }
                 if (docs.isEmpty) {
@@ -173,21 +181,32 @@ class _TransactionsPageState extends State<TransactionsPage> {
                   separatorBuilder: (_, __) => const Divider(height: 1),
                   itemBuilder: (context, index) {
                     final data = docs[index].data();
-                    final isIncome = (data['type'] as String?)?.toLowerCase() == 'income';
+                    final isIncome =
+                        (data['type'] as String?)?.toLowerCase() == 'income';
                     final amount = (data['amount'] as num?)?.toDouble() ?? 0.0;
                     final category = (data['category'] as String?) ?? 'General';
                     final desc = (data['description'] as String?) ?? '';
                     final date = (data['date'] as Timestamp?)?.toDate();
                     return ListTile(
                       leading: CircleAvatar(
-                        backgroundColor: isIncome ? Colors.green.withOpacity(0.15) : Colors.red.withOpacity(0.15),
-                        child: Icon(isIncome ? Icons.arrow_downward : Icons.arrow_upward, color: isIncome ? Colors.green : Colors.red),
+                        backgroundColor: isIncome
+                            ? Colors.green.withOpacity(0.15)
+                            : Colors.red.withOpacity(0.15),
+                        child: Icon(
+                          isIncome ? Icons.arrow_downward : Icons.arrow_upward,
+                          color: isIncome ? Colors.green : Colors.red,
+                        ),
                       ),
-                      title: Text('${isIncome ? '+' : '-'} ${amount.toStringAsFixed(2)} • $category'),
-                      subtitle: Text([
-                        if (date != null) '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}',
-                        if (desc.isNotEmpty) desc,
-                      ].join('  •  ')),
+                      title: Text(
+                        '${isIncome ? '+' : '-'} ${amount.toStringAsFixed(2)} • $category',
+                      ),
+                      subtitle: Text(
+                        [
+                          if (date != null)
+                            '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}',
+                          if (desc.isNotEmpty) desc,
+                        ].join('  •  '),
+                      ),
                     );
                   },
                 );

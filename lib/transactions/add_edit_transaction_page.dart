@@ -1,7 +1,11 @@
+/// Add/Edit form for a single transaction with type, amount, category, date,
+/// and optional description.
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:personal_tracker/widgets/app_snackbar.dart';
 
+/// Presents a form to add or edit a transaction.
 class AddEditTransactionPage extends StatefulWidget {
   const AddEditTransactionPage({super.key, this.initialType});
 
@@ -41,6 +45,7 @@ class _AddEditTransactionPageState extends State<AddEditTransactionPage> {
     super.dispose();
   }
 
+  /// Opens a date picker and updates the form date.
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
@@ -53,6 +58,7 @@ class _AddEditTransactionPageState extends State<AddEditTransactionPage> {
     }
   }
 
+  /// Validates inputs and writes a new document to Firestore.
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
@@ -75,11 +81,12 @@ class _AddEditTransactionPageState extends State<AddEditTransactionPage> {
       });
       if (!mounted) return;
       Navigator.of(context).pop(true);
+    } on FirebaseException catch (e) {
+      if (!mounted) return;
+      AppSnackbar.error(context, e.message ?? 'Failed to save. Please try again.');
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to save. Please try again.')),
-      );
+      AppSnackbar.error(context, 'Failed to save. Please try again.');
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -199,4 +206,3 @@ class _AddEditTransactionPageState extends State<AddEditTransactionPage> {
     );
   }
 }
-

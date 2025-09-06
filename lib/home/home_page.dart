@@ -1,9 +1,12 @@
+/// Home shell: shows Dashboard and exposes navigation via Drawer.
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:personal_tracker/dashboard/dashboard_page.dart';
 import 'package:personal_tracker/transactions/add_edit_transaction_page.dart';
 import 'package:personal_tracker/transactions/transactions_page.dart';
+import 'package:personal_tracker/reports/reports_page.dart';
 
+/// Signed-in landing screen with dashboard, add quick FAB, and app drawer.
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
@@ -14,28 +17,8 @@ class HomePage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Personal Finance Tracker'),
-        actions: [
-          IconButton(
-            tooltip: 'Transactions',
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const TransactionsPage()),
-              );
-            },
-            icon: const Icon(Icons.list_alt),
-          ),
-          IconButton(
-            tooltip: 'Sign out',
-            onPressed: () async {
-              await FirebaseAuth.instance.signOut();
-              if (context.mounted) {
-                Navigator.of(context).pushNamedAndRemoveUntil('/login', (_) => false);
-              }
-            },
-            icon: const Icon(Icons.logout),
-          ),
-        ],
       ),
+      drawer: _AppDrawer(email: email),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -54,6 +37,68 @@ class HomePage extends StatelessWidget {
         },
         icon: const Icon(Icons.add),
         label: const Text('Add Transaction'),
+      ),
+    );
+  }
+}
+
+/// App drawer for navigating between core sections and signing out.
+class _AppDrawer extends StatelessWidget {
+  const _AppDrawer({required this.email});
+  final String email;
+
+  @override
+  Widget build(BuildContext context) {
+    return Drawer(
+      child: SafeArea(
+        child: ListView(
+          children: [
+            UserAccountsDrawerHeader(
+              accountName: const Text(''),
+              accountEmail: Text(email),
+              currentAccountPicture: const CircleAvatar(child: Icon(Icons.person)),
+            ),
+            ListTile(
+              leading: const Icon(Icons.dashboard_outlined),
+              title: const Text('Dashboard'),
+              onTap: () {
+                Navigator.pop(context); // just close drawer, already on dashboard
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.list_alt),
+              title: const Text('Transactions'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const TransactionsPage()),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.insights_outlined),
+              title: const Text('Reports'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const ReportsPage()),
+                );
+              },
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.logout),
+              title: const Text('Sign out'),
+              onTap: () async {
+                Navigator.pop(context);
+                await FirebaseAuth.instance.signOut();
+                if (context.mounted) {
+                  Navigator.of(context).pushNamedAndRemoveUntil('/login', (_) => false);
+                }
+              },
+            ),
+          ],
+        ),
       ),
     );
   }

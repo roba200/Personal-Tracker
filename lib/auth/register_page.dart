@@ -1,6 +1,9 @@
+/// Registration screen: creates a user account via FirebaseAuth.
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:personal_tracker/widgets/app_snackbar.dart';
 
+/// Presents a form to create a new account with email + password.
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
 
@@ -24,8 +27,10 @@ class _RegisterPageState extends State<RegisterPage> {
     super.dispose();
   }
 
+  /// Toggles visibility for both password fields.
   void _toggleObscure() => setState(() => _obscure = !_obscure);
 
+  /// Creates the user and returns to the previous screen on success.
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
@@ -39,14 +44,15 @@ class _RegisterPageState extends State<RegisterPage> {
       if (!mounted) return;
       Navigator.of(context).pop();
     } on FirebaseAuthException catch (e) {
-      _showError(_mapCodeToMessage(e.code));
+      AppSnackbar.error(context, _mapCodeToMessage(e.code));
     } catch (e) {
-      _showError('Something went wrong. Please try again.');
+      AppSnackbar.error(context, 'Something went wrong. Please try again.');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
+  /// Maps FirebaseAuth error codes to user-friendly messages.
   String _mapCodeToMessage(String code) {
     switch (code) {
       case 'email-already-in-use':
@@ -62,11 +68,7 @@ class _RegisterPageState extends State<RegisterPage> {
     }
   }
 
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
-  }
+  void _showError(String message) => AppSnackbar.error(context, message);
 
   @override
   Widget build(BuildContext context) {
@@ -176,4 +178,3 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 }
-

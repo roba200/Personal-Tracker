@@ -1,8 +1,14 @@
+/// Dashboard: monthly overview of income, expenses, and budget progress.
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:personal_tracker/state/app_state.dart';
 import 'package:personal_tracker/transactions/add_edit_transaction_page.dart';
+import 'package:personal_tracker/services/transactions_service.dart';
+import 'package:personal_tracker/services/budget_service.dart';
 
+/// Displays summary cards, budget progress, quick actions, and recent list.
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
 
@@ -13,41 +19,24 @@ class DashboardPage extends StatefulWidget {
 class _DashboardPageState extends State<DashboardPage> {
   String get _uid => FirebaseAuth.instance.currentUser!.uid;
 
+
+  // Transaction stream for a specific date range.
   Stream<QuerySnapshot<Map<String, dynamic>>> _txStream({required DateTime from, required DateTime to}) {
-    final col = FirebaseFirestore.instance
-        .collection('users')
-        .doc(_uid)
-        .collection('transactions');
-    return col
-        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(from))
-        .where('date', isLessThan: Timestamp.fromDate(to))
-        .orderBy('date', descending: true)
-        .snapshots();
+    final service = TransactionsService(_uid);
+    return service.streamInRange(DateTimeRange(start: from, end: to));
   }
 
   // Default (global) monthly budget setting
-  Stream<DocumentSnapshot<Map<String, dynamic>>> _budgetDocStream() {
-    return FirebaseFirestore.instance
-        .collection('users')
-        .doc(_uid)
-        .collection('settings')
-        .doc('budget')
-        .snapshots();
-  }
+  Stream<DocumentSnapshot<Map<String, dynamic>>> _budgetDocStream() =>
+      BudgetService(_uid).streamDefault();
 
   // Month-specific budget override: users/{uid}/budgets/{yyyy-MM}
-  Stream<DocumentSnapshot<Map<String, dynamic>>> _monthBudgetStream() {
-    return FirebaseFirestore.instance
-        .collection('users')
-        .doc(_uid)
-        .collection('budgets')
-        .doc(_monthKey)
-        .snapshots();
-  }
+  Stream<DocumentSnapshot<Map<String, dynamic>>> _monthBudgetStream() =>
+      BudgetService(_uid).streamForMonth(_monthKey);
 
   DateTime get _firstOfMonth {
-    final now = DateTime.now();
-    return DateTime(now.year, now.month, 1);
+    final app = context.read<AppState>();
+    return DateTime(app.range.start.year, app.range.start.month, 1);
   }
 
   DateTime get _firstOfNextMonth {
@@ -56,8 +45,8 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   String get _monthKey {
-    final now = DateTime.now();
-    return '${now.year}-${now.month.toString().padLeft(2, '0')}';
+    final app = context.read<AppState>();
+    return '${app.range.start.year}-${app.range.start.month.toString().padLeft(2, '0')}';
   }
 
   Future<void> _setBudgetDialog([double? current]) async {
@@ -107,21 +96,7 @@ class _DashboardPageState extends State<DashboardPage> {
     if (result != null) {
       final amount = (result['amount'] as num).toDouble();
       final monthOnly = result['monthOnly'] == true;
-      if (monthOnly) {
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(_uid)
-            .collection('budgets')
-            .doc(_monthKey)
-            .set({'limit': amount}, SetOptions(merge: true));
-      } else {
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(_uid)
-            .collection('settings')
-            .doc('budget')
-            .set({'monthlyLimit': amount}, SetOptions(merge: true));
-      }
+      await BudgetService(_uid).setBudget(amount: amount, monthOnly: monthOnly, monthKey: _monthKey);
     }
   }
 
@@ -162,16 +137,13 @@ class _DashboardPageState extends State<DashboardPage> {
     );
     if (res == true) {
       final amount = double.parse(amountCtrl.text);
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(_uid)
-          .collection('transactions')
-          .add({
-        'type': type,
-        'amount': amount,
-        'note': noteCtrl.text.trim(),
-        'date': Timestamp.now(),
-      });
+      await TransactionsService(_uid).add(
+        type: type,
+        amount: amount,
+        category: 'Quick',
+        description: noteCtrl.text.trim(),
+        date: DateTime.now(),
+      );
     }
   }
 
@@ -193,6 +165,14 @@ class _DashboardPageState extends State<DashboardPage> {
             return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
           stream: _txStream(from: from, to: to),
           builder: (context, txSnap) {
+            if (txSnap.hasError) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Text('Failed to load dashboard data. Please try again.'),
+                ),
+              );
+            }
             double income = 0, expenses = 0;
             if (txSnap.hasData) {
               for (final d in txSnap.data!.docs) {
@@ -332,7 +312,7 @@ class _DashboardPageState extends State<DashboardPage> {
               ],
             ),
             const SizedBox(height: 8),
-            LinearProgressIndicator(value: budget > 0 ? ratio : null, color: color, minHeight: 10),
+            LinearProgressIndicator(value: budget > 0 ? ratio : 0, color: color, minHeight: 10),
             const SizedBox(height: 8),
             Wrap(
               spacing: 12,
@@ -375,7 +355,7 @@ class _DashboardPageState extends State<DashboardPage> {
         final amount = (d['amount'] as num?)?.toDouble() ?? 0.0;
         final ts = d['date'] as Timestamp?;
         final date = ts?.toDate();
-        final note = (d['note'] as String?) ?? '';
+        final note = (d['description'] as String?) ?? (d['note'] as String?) ?? '';
         return ListTile(
           leading: CircleAvatar(
             backgroundColor: isIncome ? Colors.green.withOpacity(0.15) : Colors.red.withOpacity(0.15),

@@ -1,6 +1,9 @@
+/// Login screen: email/password authentication using FirebaseAuth.
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:personal_tracker/widgets/app_snackbar.dart';
 
+/// Presents a form to sign in with email and password.
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -22,8 +25,11 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
+  /// Toggles password field visibility.
   void _toggleObscure() => setState(() => _obscure = !_obscure);
 
+  /// Attempts to authenticate with FirebaseAuth and navigates to `/home`
+  /// when successful. Shows friendly error messages on failure.
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
@@ -35,14 +41,15 @@ class _LoginPageState extends State<LoginPage> {
       if (!mounted) return;
       Navigator.of(context).pushReplacementNamed('/home');
     } on FirebaseAuthException catch (e) {
-      _showError(_mapCodeToMessage(e.code));
+      AppSnackbar.error(context, _mapCodeToMessage(e.code));
     } catch (e) {
-      _showError('Something went wrong. Please try again.');
+      AppSnackbar.error(context, 'Something went wrong. Please try again.');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
+  /// Maps FirebaseAuth error codes to user-friendly messages.
   String _mapCodeToMessage(String code) {
     switch (code) {
       case 'invalid-email':
@@ -58,11 +65,7 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
-  }
+  void _showError(String message) => AppSnackbar.error(context, message);
 
   @override
   Widget build(BuildContext context) {
@@ -155,10 +158,8 @@ class _LoginPageState extends State<LoginPage> {
                             await FirebaseAuth.instance
                                 .sendPasswordResetEmail(email: email);
                             if (!mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                  content: Text('Password reset email sent.')),
-                            );
+                            AppSnackbar.success(
+                                context, 'Password reset email sent.');
                           } on FirebaseAuthException catch (e) {
                             _showError(_mapCodeToMessage(e.code));
                           }
@@ -182,4 +183,3 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 }
-
