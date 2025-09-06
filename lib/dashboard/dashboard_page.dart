@@ -25,12 +25,23 @@ class _DashboardPageState extends State<DashboardPage> {
         .snapshots();
   }
 
+  // Default (global) monthly budget setting
   Stream<DocumentSnapshot<Map<String, dynamic>>> _budgetDocStream() {
     return FirebaseFirestore.instance
         .collection('users')
         .doc(_uid)
         .collection('settings')
         .doc('budget')
+        .snapshots();
+  }
+
+  // Month-specific budget override: users/{uid}/budgets/{yyyy-MM}
+  Stream<DocumentSnapshot<Map<String, dynamic>>> _monthBudgetStream() {
+    return FirebaseFirestore.instance
+        .collection('users')
+        .doc(_uid)
+        .collection('budgets')
+        .doc(_monthKey)
         .snapshots();
   }
 
@@ -44,40 +55,73 @@ class _DashboardPageState extends State<DashboardPage> {
     return DateTime(f.year, f.month + 1, 1);
   }
 
+  String get _monthKey {
+    final now = DateTime.now();
+    return '${now.year}-${now.month.toString().padLeft(2, '0')}';
+  }
+
   Future<void> _setBudgetDialog([double? current]) async {
     final controller = TextEditingController(text: current?.toStringAsFixed(2) ?? '');
-    final value = await showDialog<double>(
+    bool thisMonthOnly = true;
+    final result = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text('Set Monthly Budget'),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(prefixText: '', labelText: 'Amount'),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-            FilledButton(
-              onPressed: () {
-                final parsed = double.tryParse(controller.text.replaceAll(',', ''));
-                if (parsed == null) return;
-                Navigator.pop(context, parsed);
-              },
-              child: const Text('Save'),
+        return StatefulBuilder(
+          builder: (context, setStateDialog) => AlertDialog(
+            title: const Text('Set Monthly Budget'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: controller,
+                  autofocus: true,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(prefixText: '', labelText: 'Amount'),
+                ),
+                const SizedBox(height: 12),
+                CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  value: thisMonthOnly,
+                  onChanged: (v) => setStateDialog(() => thisMonthOnly = v ?? true),
+                  title: Text('Apply to ${_monthKey} only'),
+                  subtitle: const Text('Uncheck to set a default for all months'),
+                  controlAffinity: ListTileControlAffinity.leading,
+                ),
+              ],
             ),
-          ],
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+              FilledButton(
+                onPressed: () {
+                  final parsed = double.tryParse(controller.text.replaceAll(',', ''));
+                  if (parsed == null) return;
+                  Navigator.pop(context, {'amount': parsed, 'monthOnly': thisMonthOnly});
+                },
+                child: const Text('Save'),
+              ),
+            ],
+          ),
         );
       },
     );
-    if (value != null) {
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(_uid)
-          .collection('settings')
-          .doc('budget')
-          .set({'monthlyLimit': value}, SetOptions(merge: true));
+    if (result != null) {
+      final amount = (result['amount'] as num).toDouble();
+      final monthOnly = result['monthOnly'] == true;
+      if (monthOnly) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(_uid)
+            .collection('budgets')
+            .doc(_monthKey)
+            .set({'limit': amount}, SetOptions(merge: true));
+      } else {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(_uid)
+            .collection('settings')
+            .doc('budget')
+            .set({'monthlyLimit': amount}, SetOptions(merge: true));
+      }
     }
   }
 
@@ -137,10 +181,16 @@ class _DashboardPageState extends State<DashboardPage> {
     final to = _firstOfNextMonth;
 
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      stream: _budgetDocStream(),
-      builder: (context, budgetSnap) {
-        final budget = (budgetSnap.data?.data()?['monthlyLimit'] as num?)?.toDouble() ?? 0.0;
-        return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: _monthBudgetStream(),
+      builder: (context, monthSnap) {
+        // Prefer month-specific budget; fall back to default monthlyLimit
+        final monthLimit = (monthSnap.data?.data()?['limit'] as num?)?.toDouble();
+        return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+          stream: _budgetDocStream(),
+          builder: (context, defaultSnap) {
+            final defaultLimit = (defaultSnap.data?.data()?['monthlyLimit'] as num?)?.toDouble();
+            final budget = monthLimit ?? defaultLimit ?? 0.0;
+            return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
           stream: _txStream(from: from, to: to),
           builder: (context, txSnap) {
             double income = 0, expenses = 0;
@@ -157,6 +207,19 @@ class _DashboardPageState extends State<DashboardPage> {
               }
             }
             final remaining = budget - expenses;
+            final used = expenses;
+            final ratio = budget > 0 ? (used / budget).clamp(0.0, 1.0) : 0.0;
+            final over = used - budget;
+            Color barColor;
+            if (budget == 0) {
+              barColor = Colors.grey;
+            } else if (ratio < 0.5) {
+              barColor = Colors.green;
+            } else if (ratio < 0.9) {
+              barColor = Colors.orange;
+            } else {
+              barColor = Colors.red;
+            }
 
             return Padding(
               padding: const EdgeInsets.all(16.0),
@@ -171,8 +234,9 @@ class _DashboardPageState extends State<DashboardPage> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  _statCard(context, label: 'Remaining Budget', amount: remaining, color: Colors.blueGrey,
-                      subtitle: 'Monthly limit: ${budget.toStringAsFixed(2)}'),
+                  _budgetProgressCard(context,
+                      budget: budget, used: used, remaining: remaining, ratio: ratio, color: barColor,
+                      monthKey: _monthKey, hasMonthOverride: monthLimit != null),
                   const SizedBox(height: 12),
                   Wrap(
                     spacing: 12,
@@ -215,6 +279,8 @@ class _DashboardPageState extends State<DashboardPage> {
               ),
             );
           },
+            );
+          },
         );
       },
     );
@@ -240,6 +306,56 @@ class _DashboardPageState extends State<DashboardPage> {
         ),
       ),
     );
+  }
+
+  Widget _budgetProgressCard(BuildContext context,
+      {required double budget,
+      required double used,
+      required double remaining,
+      required double ratio,
+      required Color color,
+      required String monthKey,
+      required bool hasMonthOverride}) {
+    final t = Theme.of(context).textTheme;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Monthly Budget ($monthKey)', style: t.titleSmall),
+                if (hasMonthOverride)
+                  const Tooltip(message: 'This month has its own budget', child: Icon(Icons.event_note, size: 18)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            LinearProgressIndicator(value: budget > 0 ? ratio : null, color: color, minHeight: 10),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 12,
+              runSpacing: 6,
+              children: [
+                _chip(Icons.account_balance_wallet_outlined, 'Limit: ${budget.toStringAsFixed(2)}'),
+                _chip(Icons.payments_outlined, 'Spent: ${used.toStringAsFixed(2)}'),
+                _chip(
+                  remaining >= 0 ? Icons.check_circle_outline : Icons.error_outline,
+                  (remaining >= 0
+                          ? 'Remaining: ${remaining.toStringAsFixed(2)}'
+                          : 'Over: ${(remaining.abs()).toStringAsFixed(2)}'),
+                ),
+              ],
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _chip(IconData icon, String label) {
+    return Chip(avatar: Icon(icon, size: 16), label: Text(label));
   }
 
   Widget _recentList(AsyncSnapshot<QuerySnapshot<Map<String, dynamic>>> txSnap) {
