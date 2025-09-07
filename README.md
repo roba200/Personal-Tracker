@@ -18,6 +18,24 @@ Personal finance tracker built with Flutter and Firebase. Track income and expen
 - **Dashboard**: monthly income/expense summary and budget progress
 - **Reports**: spending by category (pie) and weekly (bar)
 
+**Screenshots**
+- Place PNGs in `screenshots/` using these names, and GitHub will render them below:
+  - `1_login.png`, `2_register.png`, `3_dashboard.png`, `4_transactions.png`, `5_add_transaction.png`, `6_reports.png`
+
+<p align="center">
+  <img src="screenshots/3_dashboard.png" alt="Dashboard" width="280" />
+  <img src="screenshots/4_transactions.png" alt="Transactions" width="280" />
+  <img src="screenshots/6_reports.png" alt="Reports" width="280" />
+</p>
+
+Additional screens:
+
+<p>
+  <img src="screenshots/1_login.png" alt="Login" width="220" />
+  <img src="screenshots/2_register.png" alt="Register" width="220" />
+  <img src="screenshots/5_add_transaction.png" alt="Add Transaction" width="220" />
+</p>
+
 **Project Structure**
 - `lib/main.dart`: app entry, Firebase init, routes, auth gate
 - `lib/home/home_page.dart`: shell with drawer and FAB
@@ -72,6 +90,12 @@ Personal finance tracker built with Flutter and Firebase. Track income and expen
 - **Permission denied / Firestore rules**: while developing, you can use basic per‑user rules like:
   - Match `users/{userId}/**` and allow read/write only when `request.auth != null && request.auth.uid == userId`.
   - Tighten rules before production.
+
+**Taking Screenshots**
+- Run on a device or emulator and capture:
+  - Android Studio: Device Manager → three‑dot menu → Take Screenshot
+  - iOS Simulator: File → New Screenshot (Cmd+S) or Cmd+S shortcut
+  - CLI (Android): `adb exec-out screencap -p > screenshots/3_dashboard.png`
 
 **License**
 - Provided as‑is for personal use. Add your preferred license if distributing.
