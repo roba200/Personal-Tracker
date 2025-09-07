@@ -1,4 +1,3 @@
-/// Helper for consistent SnackBar messages across the app.
 import 'package:flutter/material.dart';
 
 class AppSnackbar {

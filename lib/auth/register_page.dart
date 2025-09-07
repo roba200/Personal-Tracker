@@ -1,9 +1,7 @@
-/// Registration screen: creates a user account via FirebaseAuth.
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:personal_tracker/widgets/app_snackbar.dart';
 
-/// Presents a form to create a new account with email + password.
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
 
@@ -85,8 +83,11 @@ class _RegisterPageState extends State<RegisterPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Icon(Icons.person_add_outlined,
-                      size: 64, color: Theme.of(context).colorScheme.primary),
+                  Icon(
+                    Icons.person_add_outlined,
+                    size: 64,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
                   const SizedBox(height: spacing * 1.5),
                   TextFormField(
                     controller: _emailController,
@@ -101,7 +102,8 @@ class _RegisterPageState extends State<RegisterPage> {
                       final value = v?.trim() ?? '';
                       if (value.isEmpty) return 'Email is required';
                       final emailRx = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-                      if (!emailRx.hasMatch(value)) return 'Enter a valid email';
+                      if (!emailRx.hasMatch(value))
+                        return 'Enter a valid email';
                       return null;
                     },
                   ),
@@ -116,9 +118,11 @@ class _RegisterPageState extends State<RegisterPage> {
                       border: const OutlineInputBorder(),
                       suffixIcon: IconButton(
                         onPressed: _toggleObscure,
-                        icon: Icon(_obscure
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined),
+                        icon: Icon(
+                          _obscure
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
+                        ),
                       ),
                     ),
                     validator: (v) {

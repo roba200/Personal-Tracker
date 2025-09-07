@@ -1,7 +1,5 @@
-/// Data model helper for a transaction document.
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// Immutable view of a transaction document.
 class TransactionModel {
   final String id;
   final String type; // 'income' or 'expense'
@@ -19,7 +17,6 @@ class TransactionModel {
     required this.date,
   });
 
-  /// Serializes to a Firestore-ready map.
   Map<String, dynamic> toMap() {
     return {
       'type': type,

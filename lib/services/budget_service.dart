@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'firestore_refs.dart';
 
-/// Service for reading and updating monthly budget limits.
 class BudgetService {
   BudgetService(this.uid) : refs = FirestoreRefs(uid);
   final String uid;

@@ -1,5 +1,3 @@
-// App entry point and global wiring: initializes Firebase, provides app-wide
-// state (Provider), and registers routes.
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';

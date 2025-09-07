@@ -1,7 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// Centralizes Firestore collection/document references for a given user.
-/// Keeping paths in one place avoids typos and makes future schema changes easier.
 class FirestoreRefs {
   FirestoreRefs(this.uid);
   final String uid;

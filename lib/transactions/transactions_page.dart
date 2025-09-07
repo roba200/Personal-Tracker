@@ -1,4 +1,3 @@
-/// Transactions list with filter controls (date range, category).
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -8,7 +7,6 @@ import 'package:personal_tracker/services/transactions_service.dart';
 import 'package:personal_tracker/widgets/error_view.dart';
 import 'add_edit_transaction_page.dart';
 
-/// Lists transactions for the selected period and allows quick filtering.
 class TransactionsPage extends StatefulWidget {
   const TransactionsPage({super.key});
 
@@ -39,7 +37,6 @@ class _TransactionsPageState extends State<TransactionsPage> {
   }
 
   Stream<QuerySnapshot<Map<String, dynamic>>> _txStream() {
-    // Delegate to service for reuse and single-responsibility.
     final app = context.watch<AppState>();
     return TransactionsService(_uid).streamInRange(app.range);
   }

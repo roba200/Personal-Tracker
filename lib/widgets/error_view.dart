@@ -1,4 +1,3 @@
-/// Simple reusable error view with optional retry.
 import 'package:flutter/material.dart';
 
 class ErrorView extends StatelessWidget {

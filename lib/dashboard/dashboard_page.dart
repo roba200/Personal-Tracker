@@ -1,4 +1,3 @@
-/// Dashboard: monthly overview of income, expenses, and budget progress.
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -8,7 +7,6 @@ import 'package:personal_tracker/transactions/add_edit_transaction_page.dart';
 import 'package:personal_tracker/services/transactions_service.dart';
 import 'package:personal_tracker/services/budget_service.dart';
 
-/// Displays summary cards, budget progress, quick actions, and recent list.
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
 

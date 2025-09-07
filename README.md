@@ -3,8 +3,7 @@
 Personal finance tracker built with Flutter and Firebase. Track income and expenses, set monthly budgets, and visualize spending with simple reports.
 
 **Tech Stack**
-- **Flutter**: cross‑platform UI (Android, iOS, web, desktop)
-- **Dart 3**: app logic and state management
+- **Flutter**: cross‑platform UI 
 - **Firebase Auth**: email/password authentication
 - **Cloud Firestore**: per‑user data storage
 - **Provider**: app state and reactive UI

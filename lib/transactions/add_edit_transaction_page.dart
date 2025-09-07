@@ -1,11 +1,8 @@
-/// Add/Edit form for a single transaction with type, amount, category, date,
-/// and optional description.
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:personal_tracker/widgets/app_snackbar.dart';
 
-/// Presents a form to add or edit a transaction.
 class AddEditTransactionPage extends StatefulWidget {
   const AddEditTransactionPage({super.key, this.initialType});
 

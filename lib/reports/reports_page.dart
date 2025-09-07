@@ -1,4 +1,3 @@
-/// Reports & Insights: visualizes monthly spending by category and week.
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -7,7 +6,6 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:personal_tracker/widgets/error_view.dart';
 
-/// Displays a pie chart by category and a weekly bar chart for expenses.
 class ReportsPage extends StatelessWidget {
   const ReportsPage({super.key});
 

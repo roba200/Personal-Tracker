@@ -1,4 +1,3 @@
-/// Home shell: shows Dashboard and exposes navigation via Drawer.
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:personal_tracker/dashboard/dashboard_page.dart';
@@ -6,7 +5,6 @@ import 'package:personal_tracker/transactions/add_edit_transaction_page.dart';
 import 'package:personal_tracker/transactions/transactions_page.dart';
 import 'package:personal_tracker/reports/reports_page.dart';
 
-/// Signed-in landing screen with dashboard, add quick FAB, and app drawer.
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 

@@ -1,9 +1,7 @@
-/// Login screen: email/password authentication using FirebaseAuth.
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:personal_tracker/widgets/app_snackbar.dart';
 
-/// Presents a form to sign in with email and password.
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -82,8 +80,11 @@ class _LoginPageState extends State<LoginPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Icon(Icons.lock_outline,
-                      size: 64, color: Theme.of(context).colorScheme.primary),
+                  Icon(
+                    Icons.lock_outline,
+                    size: 64,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
                   const SizedBox(height: spacing * 1.5),
                   TextFormField(
                     controller: _emailController,
@@ -98,7 +99,8 @@ class _LoginPageState extends State<LoginPage> {
                       final value = v?.trim() ?? '';
                       if (value.isEmpty) return 'Email is required';
                       final emailRx = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-                      if (!emailRx.hasMatch(value)) return 'Enter a valid email';
+                      if (!emailRx.hasMatch(value))
+                        return 'Enter a valid email';
                       return null;
                     },
                   ),
@@ -114,9 +116,11 @@ class _LoginPageState extends State<LoginPage> {
                       border: const OutlineInputBorder(),
                       suffixIcon: IconButton(
                         onPressed: _toggleObscure,
-                        icon: Icon(_obscure
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined),
+                        icon: Icon(
+                          _obscure
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
+                        ),
                       ),
                     ),
                     validator: (v) {
@@ -155,11 +159,14 @@ class _LoginPageState extends State<LoginPage> {
                             return;
                           }
                           try {
-                            await FirebaseAuth.instance
-                                .sendPasswordResetEmail(email: email);
+                            await FirebaseAuth.instance.sendPasswordResetEmail(
+                              email: email,
+                            );
                             if (!mounted) return;
                             AppSnackbar.success(
-                                context, 'Password reset email sent.');
+                              context,
+                              'Password reset email sent.',
+                            );
                           } on FirebaseAuthException catch (e) {
                             _showError(_mapCodeToMessage(e.code));
                           }

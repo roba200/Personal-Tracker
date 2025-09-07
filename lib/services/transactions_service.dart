@@ -2,14 +2,15 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'firestore_refs.dart';
 
-/// Service for CRUD operations and queries on user transactions.
 class TransactionsService {
   TransactionsService(this.uid) : refs = FirestoreRefs(uid);
   final String uid;
   final FirestoreRefs refs;
 
   /// Streams transactions within [range], ordered by date descending.
-  Stream<QuerySnapshot<Map<String, dynamic>>> streamInRange(DateTimeRange range) {
+  Stream<QuerySnapshot<Map<String, dynamic>>> streamInRange(
+    DateTimeRange range,
+  ) {
     return refs.transactions
         .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(range.start))
         .where('date', isLessThan: Timestamp.fromDate(range.end))
@@ -18,7 +19,9 @@ class TransactionsService {
   }
 
   /// Streams transactions within [range] without category filtering; useful to derive dynamic category lists.
-  Stream<QuerySnapshot<Map<String, dynamic>>> streamForCategories(DateTimeRange range) {
+  Stream<QuerySnapshot<Map<String, dynamic>>> streamForCategories(
+    DateTimeRange range,
+  ) {
     return refs.transactions
         .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(range.start))
         .where('date', isLessThan: Timestamp.fromDate(range.end))
@@ -46,4 +49,3 @@ class TransactionsService {
     });
   }
 }
-
